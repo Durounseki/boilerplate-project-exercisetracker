@@ -88,6 +88,8 @@ app.post("/api/users/:_id/exercises", (req, res) => {
       //Check if there is a date
       if (date === "" || date === undefined) {
         date = new Date().toDateString();
+      } else {
+        date = new Date(date).toDateString();
       }
       const newExercise = new Exercise({
         description: description,
@@ -106,7 +108,7 @@ app.post("/api/users/:_id/exercises", (req, res) => {
                 log: {
                   exercise_id: exercise._id,
                   description: exercise.description,
-                  duration: exercise.duration,
+                  duration: +exercise.duration,
                 },
               },
             },
@@ -116,7 +118,7 @@ app.post("/api/users/:_id/exercises", (req, res) => {
                 _id: id,
                 username: username,
                 date: exercise.date,
-                duration: exercise.duration,
+                duration: +exercise.duration,
                 description: exercise.description,
               });
             })
