@@ -33,9 +33,6 @@ const logSchema = new mongoose.Schema({
   log: [
     {
       exercise_id: String,
-      description: String,
-      duration: Number,
-      date: String,
     },
   ],
 });
@@ -99,7 +96,7 @@ app.post("/api/users/:_id/exercises", (req, res) => {
       });
       newExercise
         .save()
-        .then((data) => {
+        .then((exercise) => {
           //Add exercise to log
           Log.findOneAndUpdate(
             { user_id: id },
@@ -107,9 +104,9 @@ app.post("/api/users/:_id/exercises", (req, res) => {
               $inc: { count: 1 },
               $push: {
                 log: {
-                  exercise_id: data._id,
-                  description: data.description,
-                  duration: data.duration,
+                  exercise_id: exercise._id,
+                  description: exercise.description,
+                  duration: exercise.duration,
                 },
               },
             },
@@ -118,9 +115,9 @@ app.post("/api/users/:_id/exercises", (req, res) => {
               res.json({
                 _id: id,
                 username: username,
-                date: date,
-                duration: +duration,
-                description: description,
+                date: exercise.date,
+                duration: exercise.duration,
+                description: exercise.description,
               });
             })
             .catch((err) => {
@@ -141,37 +138,41 @@ app.get("/api/users/:_id/logs", (req, res) => {
   const id = req.params._id;
   const { from, to, limit } = req.query;
   //Find user
-  User.findById(id)
+  Log.findOne({ user_id: id })
     .then((data) => {
-      const username = data.username;
-      //find user's exercises
-      Exercise.find({ user_id: id })
-        .then((data) => {
-          const count = data.length;
-          let log = data.map((item) => {
-            return {
-              description: item.description,
-              duration: item.duration,
-              date: item.date,
-            };
-          });
-          if (from) {
-            const fromDate = new Date(from);
-            log = log.filter((exe) => new Date(exe.date) >= fromDate);
-          }
-          if (to) {
-            const toDate = new Date(to);
-            log = log.filter((exe) => new Date(exe.date) <= toDate);
-          }
-          if (limit) {
-            log = log.slice(0, limit);
-          }
-          res.json({
-            username: username,
-            count: count,
-            _id: id,
-            log: log,
-          });
+      //find user
+      User.findById(data.user_id)
+        .then((user) => {
+          //Retrieve exercises information
+          const exerciseIds = data.log.map((element) => element.exercise_id);
+          Exercise.find({ _id: { $in: exerciseIds } })
+            .then((exercises) => {
+              //Filter exercises
+              if (from) {
+                const fromDate = new Date(from);
+                exercises = exercises.filter(
+                  (exe) => new Date(exe.date) >= fromDate,
+                );
+              }
+              if (to) {
+                const toDate = new Date(to);
+                exercises = exercises.filter(
+                  (exe) => new Date(exe.date) <= toDate,
+                );
+              }
+              if (limit) {
+                exercises = exercises.slice(0, limit);
+              }
+              res.json({
+                _id: data.user_id,
+                username: user.username,
+                count: data.count,
+                log: exercises,
+              });
+            })
+            .catch((err) => {
+              res.json({ error: err });
+            });
         })
         .catch((err) => {
           res.json({ error: err });
