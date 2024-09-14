@@ -100,13 +100,32 @@ app.post("/api/users/:_id/exercises", (req, res) => {
       newExercise
         .save()
         .then((data) => {
-          res.json({
-            _id: id,
-            username: username,
-            date: date,
-            duration: +duration,
-            description: description,
-          });
+          //Add exercise to log
+          Log.findOneAndUpdate(
+            { user_id: id },
+            {
+              $inc: { count: 1 },
+              $push: {
+                log: {
+                  exercise_id: data._id,
+                  description: data.description,
+                  duration: data.duration,
+                },
+              },
+            },
+          )
+            .then((result) => {
+              res.json({
+                _id: id,
+                username: username,
+                date: date,
+                duration: +duration,
+                description: description,
+              });
+            })
+            .catch((err) => {
+              res.json({ error: err });
+            });
         })
         .catch((err) => {
           res.json({ error: err });
