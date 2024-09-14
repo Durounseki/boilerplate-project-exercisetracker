@@ -18,7 +18,6 @@ app.get("/", (req, res) => {
 
 //Create Schemas
 const exerciseSchema = new mongoose.Schema({
-  user_id: String,
   description: String,
   duration: Number,
   date: String,
@@ -33,6 +32,7 @@ const logSchema = new mongoose.Schema({
   count: Number,
   log: [
     {
+      exercise_id: String,
       description: String,
       duration: Number,
       date: String,
@@ -52,7 +52,20 @@ app.post("/api/users", (req, res) => {
   user
     .save()
     .then((data) => {
-      res.json({ username: data.username, _id: data._id });
+      //Create user log
+      const log = new Log({
+        user_id: data._id,
+        count: 0,
+        log: [],
+      });
+      log
+        .save()
+        .then((logData) => {
+          res.json({ username: data.username, _id: data._id });
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     })
     .catch((err) => {
       res.json({ error: err });
@@ -80,7 +93,6 @@ app.post("/api/users/:_id/exercises", (req, res) => {
         date = new Date().toDateString();
       }
       const newExercise = new Exercise({
-        user_id: id,
         description: description,
         duration: duration,
         date: date,
