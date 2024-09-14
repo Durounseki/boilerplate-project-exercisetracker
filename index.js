@@ -18,7 +18,7 @@ app.get("/", (req, res) => {
 
 //Create Schemas
 const exerciseSchema = new mongoose.Schema({
-  username: String,
+  user_id: String,
   description: String,
   duration: Number,
   date: String,
@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
 });
 
 const logSchema = new mongoose.Schema({
-  username: String,
+  user_id: String,
   count: Number,
   log: [
     {
@@ -80,7 +80,7 @@ app.post("/api/users/:_id/exercises", (req, res) => {
         date = new Date().toDateString();
       }
       const newExercise = new Exercise({
-        username: username,
+        user_id: id,
         description: description,
         duration: duration,
         date: date,
@@ -91,9 +91,55 @@ app.post("/api/users/:_id/exercises", (req, res) => {
           res.json({
             _id: id,
             username: username,
-            date: data.date,
-            duration: data.duration,
-            description: data.description,
+            date: date,
+            duration: +duration,
+            description: description,
+          });
+        })
+        .catch((err) => {
+          res.json({ error: err });
+        });
+    })
+    .catch((err) => {
+      res.json({ error: err });
+    });
+});
+
+//Get exercises
+app.get("/api/users/:_id/logs", (req, res) => {
+  const id = req.params._id;
+  const { from, to, limit } = req.query;
+  //Find user
+  User.findById(id)
+    .then((data) => {
+      const username = data.username;
+      //find user's exercises
+      Exercise.find({ user_id: id })
+        .then((data) => {
+          const count = data.length;
+          let log = data.map((item) => {
+            return {
+              description: item.description,
+              duration: item.duration,
+              date: item.date,
+            };
+          });
+          if (from) {
+            const fromDate = new Date(from);
+            log = log.filter((exe) => new Date(exe.date) >= fromDate);
+          }
+          if (to) {
+            const toDate = new Date(to);
+            log = log.filter((exe) => new Date(exe.date) <= toDate);
+          }
+          if (limit) {
+            log = log.slice(0, limit);
+          }
+          res.json({
+            username: username,
+            count: count,
+            _id: id,
+            log: log,
           });
         })
         .catch((err) => {
